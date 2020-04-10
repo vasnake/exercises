@@ -8,3 +8,9 @@ TBD
 
 ## [Free as in Monads by Daniel Spiewak](https://youtu.be/aKUQUIHRGec)
 TBD
+
+## [Monad transformers down to earth by Gabriele Petronella](https://youtu.be/jd5e71nFEZM)
+TBD
+
+## [Monad Transformers: Scala, stop Eff'ing around! by Sukant Hajra](https://youtu.be/QtZJATIPB0k)
+TBD
