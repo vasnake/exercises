@@ -11,3 +11,4 @@ SBT Scala project with code snippets created after watching videos:
 - [Free as in Monads by Daniel Spiewak](https://youtu.be/aKUQUIHRGec)
 - [Monad transformers down to earth by Gabriele Petronella](https://youtu.be/jd5e71nFEZM)
 - [Monad Transformers: Scala, stop Eff'ing around! by Sukant Hajra](https://youtu.be/QtZJATIPB0k)
+- [Practical Eff monad for microservices by Eric Torreborre](https://youtu.be/5iV-x8CFmtU)

@@ -14,3 +14,8 @@ TBD
 
 ## [Monad Transformers: Scala, stop Eff'ing around! by Sukant Hajra](https://youtu.be/QtZJATIPB0k)
 TBD
+
+## [Practical Eff monad for microservices by Eric Torreborre](https://youtu.be/5iV-x8CFmtU)
+This video was recorded at Scala Days Chicago 2017
+
+TBD
