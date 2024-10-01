@@ -16,4 +16,4 @@ Programming languages, developer's tools, tricks, exercises, etc.
 
 ## Snowflake
 
-[Snowflake 101 worksheets](./snowflake/)
+[Snowflake 101, worksheets](./snowflake/)
