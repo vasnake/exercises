@@ -53,5 +53,5 @@ select system$clustering_information('LINEITEM');
 --   "clustering_errors" : [ ]
 -- }
 
-
--- https://youtu.be/EQ44K5GfgDw?feature=shared&t=921
+-- AWS S3 -> Snowflake integration object https://youtu.be/EQ44K5GfgDw?feature=shared&t=921
+-- Ingesting CSV https://youtu.be/EQ44K5GfgDw?feature=shared&t=1299
