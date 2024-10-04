@@ -54,4 +54,20 @@ select system$clustering_information('LINEITEM');
 -- }
 
 -- AWS S3 -> Snowflake integration object https://youtu.be/EQ44K5GfgDw?feature=shared&t=921
+-- create IAM role (AWS)
+-- create S3 bucket and add sample data
+-- create integration object (Snowflake)
+
+-- https://eu-north-1.console.aws.amazon.com/console/home?region=eu-north-1#
+-- in 'Services' input, type 'IAM', click 'IAM manage access ...', IAM Dashboard opens;
+-- roles, create role
+-- AWS account, require external id (00000), next
+-- add permission: type 's3', select 'QuickSightAccessForS3StorageManagementAnalyticsReadOnly', next
+-- role name: snowflake-aws-role, create
+-- in service, type 's3', select 'S3 storage ...'
+-- create bucket 'snowflake-bucket', uncheck 'block all public access', create
+-- check that region the same as in IAM
+-- click on bucket, 'create folder' 'ecommerce_dev/lineitem', inside 'csv', 'json', 'parquet' folders
+-- upload files ...
+
 -- Ingesting CSV https://youtu.be/EQ44K5GfgDw?feature=shared&t=1299

@@ -1,7 +1,6 @@
 -- https://app.snowflake.com/bpgrktt/ey00038/wEAZyckaFiW/query
 
 -- # snowflake
--- Username: VLK Tac_wqw_ner_${P}1
 -- Dedicated Login URL: https://bpgrktt-ey00038.snowflakecomputing.com
 
 /*--
