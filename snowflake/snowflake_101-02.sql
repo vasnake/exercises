@@ -68,6 +68,12 @@ select system$clustering_information('LINEITEM');
 -- create bucket 'snowflake-bucket', uncheck 'block all public access', create
 -- check that region the same as in IAM
 -- click on bucket, 'create folder' 'ecommerce_dev/lineitem', inside 'csv', 'json', 'parquet' folders
+-- s3://vlk-snowflake-bucket/ecommerce_dev/lineitem/csv/
 -- upload files ...
+-- where I find files to upload?
+use schema ecommerce_db.ecommerce_liv;
+select * from LINEITEM limit 10;
+
+-- Ingesting CSV https://youtu.be/EQ44K5GfgDw?feature=shared&t=1299
 
 -- Ingesting CSV https://youtu.be/EQ44K5GfgDw?feature=shared&t=1299
