@@ -75,6 +75,7 @@ select system$clustering_information('LINEITEM');
 -- s3://vlk-snowflake-bucket/ecommerce_dev/lineitem/csv/
 -- bucket ARN: arn:aws:s3:::vlk-snowflake-bucket
 
+-- create files to upload ... see next section, 'copy ...'
 -- upload files ... skip for the moment ...
 
 -- to create integration object, you need accountadmin
@@ -103,11 +104,7 @@ desc integration aws_sf_data;
 
 -- earlier I created stage
 -- CREATE OR REPLACE STAGE tasty_bytes_sample_data.public.blob_stage url = 's3://sfquickstarts/tastybytes/' file_format = (type = csv);
--- stage vs storage integration?
-
--- create files to upload
-use schema ecommerce_db.ecommerce_liv;
-select * from LINEITEM limit 10;
+-- stage vs storage integration? see next section ...
 
 
 -- Ingesting CSV from S3 to Snowflake https://youtu.be/EQ44K5GfgDw?t=1297
