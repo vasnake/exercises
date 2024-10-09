@@ -110,4 +110,55 @@ use schema ecommerce_db.ecommerce_liv;
 select * from LINEITEM limit 10;
 
 
--- Ingesting CSV https://youtu.be/EQ44K5GfgDw?t=1297
+-- Ingesting CSV from S3 to Snowflake https://youtu.be/EQ44K5GfgDw?t=1297
+-- create new empty table, copy of prod table
+-- create file format
+-- create stage
+-- copy into X from Y
+
+-- use role sysadmin;
+use role accountadmin;
+use database ecommerce_db;
+create schema ecommerce_dev;
+use schema ecommerce_db.ecommerce_dev;
+create table lineitem cluster by (L_SHIPDATE) as select * from "ECOMMERCE_DB"."ECOMMERCE_LIV"."LINEITEM" limit 1;
+truncate table lineitem;
+
+create file format csv_load_format
+  type = 'CSV'
+  compression = 'AUTO'
+  field_delimiter = ','
+  record_delimiter = '\n'
+  skip_header = 1
+  field_optionally_enclosed_by = '\042'
+  trim_space = false
+  error_on_column_count_mismatch = true
+  escape = 'NONE'
+  escape_unenclosed_field = '\134'
+  date_format = 'AUTO'
+  timestamp_format = 'AUTO';
+desc file format csv_load_format;
+
+create stage stage_csv_dev
+  storage_integration = aws_sf_data -- one line difference with earlier 'create stage ...'
+  url = 's3://vlk-snowflake-bucket/ecommerce_dev/lineitem/csv/'
+  file_format = csv_load_format;
+-- url from bucket page: https://eu-north-1.console.aws.amazon.com/s3/buckets/vlk-snowflake-bucket?prefix=ecommerce_dev/lineitem/&region=eu-north-1&bucketType=general
+desc stage stage_csv_dev;
+
+list @stage_csv_dev;
+-- access denied, goto
+-- https://us-east-1.console.aws.amazon.com/iam/home?region=eu-north-1#/roles/details/snowflake-aws-role?section=permissions
+-- add AmazonS3FullAccess policy to permissions policies
+
+copy into @stage_csv_dev from "ECOMMERCE_DB"."ECOMMERCE_LIV"."LINEITEM";
+list @stage_csv_dev;
+-- name: s3://vlk-snowflake-bucket/ecommerce_dev/lineitem/csv/data_0_0_0.csv.gz
+
+use schema ecommerce_db.ecommerce_dev;
+copy into lineitem from @stage_csv_dev on_error = abort_statement;
+-- rows_loaded: 99999
+select * from lineitem limit 10;
+select count(1) from lineitem;
+
+-- next: https://youtu.be/EQ44K5GfgDw?t=1656
