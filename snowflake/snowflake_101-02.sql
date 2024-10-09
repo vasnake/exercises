@@ -53,7 +53,8 @@ select system$clustering_information('LINEITEM');
 --   "clustering_errors" : [ ]
 -- }
 
--- AWS S3 -> Snowflake integration object https://youtu.be/EQ44K5GfgDw?feature=shared&t=921
+
+-- AWS S3 -> Snowflake, integration object https://youtu.be/EQ44K5GfgDw?feature=shared&t=921
 -- create IAM role (AWS)
 -- create S3 bucket and add sample data
 -- create integration object (Snowflake)
@@ -63,17 +64,50 @@ select system$clustering_information('LINEITEM');
 -- roles, create role
 -- AWS account, require external id (00000), next
 -- add permission: type 's3', select 'QuickSightAccessForS3StorageManagementAnalyticsReadOnly', next
--- role name: snowflake-aws-role, create
+-- role name: snowflake-aws-role, create ...
+-- https://us-east-1.console.aws.amazon.com/iam/home?region=eu-north-1#/roles
+-- ARN: arn:aws:iam::443370716175:role/snowflake-aws-role
+
 -- in service, type 's3', select 'S3 storage ...'
 -- create bucket 'snowflake-bucket', uncheck 'block all public access', create
--- check that region the same as in IAM
+-- check that bucket region the same as for snowflake
 -- click on bucket, 'create folder' 'ecommerce_dev/lineitem', inside 'csv', 'json', 'parquet' folders
 -- s3://vlk-snowflake-bucket/ecommerce_dev/lineitem/csv/
--- upload files ...
--- where I find files to upload?
+-- bucket ARN: arn:aws:s3:::vlk-snowflake-bucket
+
+-- upload files ... skip for the moment ...
+
+-- to create integration object, you need accountadmin
+use role accountadmin;
+create storage integration aws_sf_data
+  TYPE = EXTERNAL_STAGE
+  STORAGE_PROVIDER = S3
+  ENABLED = TRUE
+  STORAGE_AWS_ROLE_ARN = 'arn:aws:iam::443370716175:role/snowflake-aws-role'
+  STORAGE_ALLOWED_LOCATIONS = ('s3://vlk-snowflake-bucket');
+
+-- find info to add to aws
+desc integration aws_sf_data;
+-- STORAGE_AWS_IAM_USER_ARN: arn:aws:iam::905418160770:user/e1fn0000-s
+-- STORAGE_AWS_EXTERNAL_ID: BZ10531_SFCRole=3_mLHN6alq+SISNuBypMs9YPojHR0=
+
+-- goto aws
+-- https://us-east-1.console.aws.amazon.com/iam/home?region=eu-north-1#/roles/details/snowflake-aws-role?section=permissions
+-- trust relationships, edit trust policy
+
+-- "Statement" / "Principal" / "AWS": "arn:aws:iam::443370716175:root" =>
+-- "Statement" / "Principal" / "AWS": "arn:aws:iam::905418160770:user/e1fn0000-s"
+
+-- "Statement" / "Condition" / "StringEquals" / "sts:ExternalId": "00000" =>
+-- "Statement" / "Condition" / "StringEquals" / "sts:ExternalId": "BZ10531_SFCRole=3_mLHN6alq+SISNuBypMs9YPojHR0="
+
+-- earlier I created stage
+-- CREATE OR REPLACE STAGE tasty_bytes_sample_data.public.blob_stage url = 's3://sfquickstarts/tastybytes/' file_format = (type = csv);
+-- stage vs storage integration?
+
+-- create files to upload
 use schema ecommerce_db.ecommerce_liv;
 select * from LINEITEM limit 10;
 
--- Ingesting CSV https://youtu.be/EQ44K5GfgDw?feature=shared&t=1299
 
--- Ingesting CSV https://youtu.be/EQ44K5GfgDw?feature=shared&t=1299
+-- Ingesting CSV https://youtu.be/EQ44K5GfgDw?t=1297
