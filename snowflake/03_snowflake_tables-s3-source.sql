@@ -151,6 +151,7 @@ list @stage_csv_dev;
 copy into @stage_csv_dev from "ECOMMERCE_DB"."ECOMMERCE_LIV"."LINEITEM";
 list @stage_csv_dev;
 -- name: s3://vlk-snowflake-bucket/ecommerce_dev/lineitem/csv/data_0_0_0.csv.gz
+-- arn:aws:s3:::vlk-snowflake-bucket/ecommerce_dev/lineitem/csv/data_0_0_0.csv.gz
 
 use schema ecommerce_db.ecommerce_dev;
 copy into lineitem from @stage_csv_dev on_error = abort_statement;
@@ -159,3 +160,153 @@ select * from lineitem limit 10;
 select count(1) from lineitem;
 
 -- next: https://youtu.be/EQ44K5GfgDw?t=1656
+
+-- Ingest JSON, S3 -> SF: https://youtu.be/EQ44K5GfgDw?t=1656
+-- create file format
+-- create stage
+-- (create files on S3, optional)
+-- create temp table with one variant column
+-- copy into temp table
+-- insert parsed (from temp table) json to target
+
+-- use role sysadmin;
+use role accountadmin;
+use schema ecommerce_db.ecommerce_dev;
+
+create or replace file format json_load_format
+  type = 'JSON';
+
+-- goto https://eu-north-1.console.aws.amazon.com/s3/buckets/vlk-snowflake-bucket?prefix=ecommerce_dev/lineitem/&region=eu-north-1&bucketType=general
+-- create folder lineitem/json
+
+create stage stage_json_dev
+  storage_integration = aws_sf_data
+  url = 's3://vlk-snowflake-bucket/ecommerce_dev/lineitem/json/'
+  file_format = json_load_format;
+desc stage stage_json_dev;
+list @stage_json_dev;
+
+-- create files in S3
+
+copy into @stage_json_dev from "ECOMMERCE_DB"."ECOMMERCE_LIV"."LINEITEM";
+-- Unsupported feature 'unloading of more than one column or non-json values'.
+-- https://stackoverflow.com/questions/76590915/using-snowflakes-copy-into-command-populate-data-to-specific-columns
+-- problem: it needs valid json, get one:
+select To_JSON(object_construct(*)) as json_obj from "ECOMMERCE_DB"."ECOMMERCE_LIV"."LINEITEM" limit 10;
+
+-- copy into not working with cte
+with cte (json_obj) as (
+  select To_JSON(object_construct(*)) from "ECOMMERCE_DB"."ECOMMERCE_LIV"."LINEITEM"
+) select * from cte limit 10; -- copy into @stage_json_dev from cte;
+
+-- works OK
+copy into @stage_json_dev from (
+  select object_construct(*) as json_obj from "ECOMMERCE_DB"."ECOMMERCE_LIV"."LINEITEM"
+);
+-- https://docs.snowflake.com/en/sql-reference/sql/copy-into-location
+
+-- files ready
+
+use schema ecommerce_db.ecommerce_dev;
+copy into lineitem from @stage_json_dev on_error = abort_statement;
+-- compile error: JSON file format can produce one and only one column of type variant, object, or array. Load data into separate columns using the MATCH_BY_COLUMN_NAME copy option or copy with transformation.
+
+-- lets explore, select first column
+select $1 from @stage_json_dev limit 10;
+/* one row text: {
+  "L_COMMENT": "e bravely even packages. furiously e",
+  "L_COMMITDATE": "1992-04-01",
+  "L_DISCOUNT": 0.03,
+  "L_EXTENDEDPRICE": 19915.2,
+  "L_LINENUMBER": 3,
+  "L_LINESTATUS": "F",
+  "L_ORDERKEY": 2164615200,
+  "L_PARTKEY": 174815421,
+  "L_QUANTITY": 15,
+  "L_RECEIPTDATE": "1992-01-07",
+  "L_RETURNFLAG": "A",
+  "L_SHIPDATE": "1992-01-03",
+  "L_SHIPINSTRUCT": "TAKE BACK RETURN",
+  "L_SHIPMODE": "FOB",
+  "L_SUPPKEY": 7315439,
+  "L_TAX": 0.01
+} */
+-- json object, row from src table
+-- suggestion: ELT, load into temp table as is, transform-load to target table
+
+-- create temp table
+create table lineitem_raw_json (src variant);
+copy into lineitem_raw_json from @stage_json_dev on_error = abort_statement;
+-- file: s3://vlk-snowflake-bucket/ecommerce_dev/lineitem/json/data_0_0_0.json.gz
+-- rows_loaded: 100000
+
+-- check
+select * from lineitem_raw_json limit 3;
+/*{
+  "L_COMMENT": "e bravely even packages. furiously e",
+  "L_COMMITDATE": "1992-04-01",
+  "L_DISCOUNT": 0.03,
+  "L_EXTENDEDPRICE": 19915.2,
+  "L_LINENUMBER": 3,
+  "L_LINESTATUS": "F",
+  "L_ORDERKEY": 2164615200,
+  "L_PARTKEY": 174815421,
+  "L_QUANTITY": 15,
+  "L_RECEIPTDATE": "1992-01-07",
+  "L_RETURNFLAG": "A",
+  "L_SHIPDATE": "1992-01-03",
+  "L_SHIPINSTRUCT": "TAKE BACK RETURN",
+  "L_SHIPMODE": "FOB",
+  "L_SUPPKEY": 7315439,
+  "L_TAX": 0.01
+}*/
+
+-- get table columns names and they order
+desc table lineitem;
+SELECT GET_DDL('table', 'ECOMMERCE_DB.ECOMMERCE_DEV.LINEITEM');
+/*
+create or replace TABLE LINEITEM cluster by (L_SHIPDATE)(
+	L_ORDERKEY NUMBER(38,0),
+	L_PARTKEY NUMBER(38,0),
+	L_SUPPKEY NUMBER(38,0),
+	L_LINENUMBER NUMBER(38,0),
+	L_QUANTITY NUMBER(12,2),
+	L_EXTENDEDPRICE NUMBER(12,2),
+	L_DISCOUNT NUMBER(12,2),
+	L_TAX NUMBER(12,2),
+	L_RETURNFLAG VARCHAR(1),
+	L_LINESTATUS VARCHAR(1),
+	L_SHIPDATE DATE,
+	L_COMMITDATE DATE,
+	L_RECEIPTDATE DATE,
+	L_SHIPINSTRUCT VARCHAR(25),
+	L_SHIPMODE VARCHAR(10),
+	L_COMMENT VARCHAR(44)
+);
+*/
+
+-- produce this stupid query
+insert into lineitem
+select -- order of columns is crucial
+	SRC:L_ORDERKEY,
+	SRC:L_PARTKEY,
+	SRC:L_SUPPKEY,
+	SRC:L_LINENUMBER,
+	SRC:L_QUANTITY,
+	SRC:L_EXTENDEDPRICE,
+	SRC:L_DISCOUNT,
+	SRC:L_TAX,
+	SRC:L_RETURNFLAG,
+	SRC:L_LINESTATUS,
+	SRC:L_SHIPDATE,
+	SRC:L_COMMITDATE,
+	SRC:L_RECEIPTDATE,
+	SRC:L_SHIPINSTRUCT,
+	SRC:L_SHIPMODE,
+	SRC:L_COMMENT
+from lineitem_raw_json;
+
+select * from lineitem limit 3;
+
+-- next: https://youtu.be/EQ44K5GfgDw?t=2006
+-- creating roles and granting access
