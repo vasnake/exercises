@@ -1,12 +1,12 @@
 # exercises
 
-Programming languages, developer's tools, tricks, exercises, etc.
+Programming languages, developer's tools, tricks, exercises, kata, etc.
 
 ## Category-Theory-Scala
 
-### Category-Theory-Scala/mycats
+### Category-Theory-Scala / mycats
 
-[SBT Scala project](./Category-Theory-Scala/mycats/README.md) with code snippets created after watching videos:
+[SBT Scala project](./Category-Theory-Scala/mycats/README.md), code snippets created after watching videos:
 - [A Pragmatic Introduction to Category Theory—Daniela Sfregola](https://youtu.be/Ss149MsZluI)
 - [Why the free Monad isn't free - by Kelley Robinson](https://youtu.be/U0lK0hnbc4U)
 - [Free as in Monads by Daniel Spiewak](https://youtu.be/aKUQUIHRGec)
@@ -16,4 +16,4 @@ Programming languages, developer's tools, tricks, exercises, etc.
 
 ## Snowflake
 
-[Snowflake 101, worksheets](./snowflake/)
+[Snowflake, AWS: basics](./snowflake/)
