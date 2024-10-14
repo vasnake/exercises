@@ -88,4 +88,71 @@ number of rows inserted |	number of rows updated
 0	1
 */
 
+
 -- Append-only Streams https://youtu.be/EQ44K5GfgDw?t=2603
+-- lets take the last example as a base
+
+use role accountadmin;
+use warehouse compute_wh;
+use database ecommerce_db;
+create or replace schema streams_test;
+use schema streams_test;
+
+-- staging table
+create or replace table members_raw (
+  id number(8) not null,
+  name varchar(255) default null,
+  fee number(3) null
+);
+
+-- prod table
+create or replace table members_prod (
+  id number(8) not null,
+  name varchar(255) default null,
+  fee number(3) null
+);
+
+-- stream (append_only)
+create or replace stream members_append_stream on table members_raw append_only=true;
+
+-- add data to stage
+insert into members_raw(id, name, fee) values
+  (1, 'Joe', 0),
+  (2, 'Jane', 0),
+  (3, 'George', 0),
+  (4, 'Betty', 0),
+  (5, 'Sally', 0)
+;
+
+select * from members_append_stream;
+/*
+ID	NAME	FEE	METADATA$ACTION	METADATA$ISUPDATE	METADATA$ROW_ID
+1	Joe	0	INSERT	FALSE	c35e8e698ebf244f5ee12b64cd6d86ed14696c23
+2	Jane	0	INSERT	FALSE	44d6105b6570088f15b8ca6ad7452408201e9aba
+3	George	0	INSERT	FALSE	42f66726e127221d42f132fd18014bd41c627054
+4	Betty	0	INSERT	FALSE	2c94557f06d4fee921903fc794a86cc3764631fe
+5	Sally	0	INSERT	FALSE	0b2dc7567d136d37f9d66fa8724049dc9e0ccf78
+*/
+
+-- offset is zero: not consumed any rows from stream yet
+select system$stream_get_table_timestamp('members_append_stream') as members_table_stream_offset;
+/*
+MEMBERS_TABLE_STREAM_OFFSET
+0
+*/
+
+-- add inserted rows, from stream to prod, easy, w/o condition, only added rows in stream
+insert into members_prod(id, name, fee) select id, name, fee from members_append_stream;
+-- stream now is empty
+-- offset?
+select to_timestamp(system$stream_get_table_timestamp('members_append_stream')) as members_table_stream_offset;
+/*
+MEMBERS_TABLE_STREAM_OFFSET
+2024-10-14 14:55:52.916
+*/
+
+-- lets try update and delete
+update members_raw set fee = 10 where id = 3;
+select * from members_append_stream; -- no results (append_only stream, remember?)
+
+-- Connect Python with Snowflake on localhost https://youtu.be/EQ44K5GfgDw?t=2798
