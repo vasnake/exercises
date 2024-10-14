@@ -194,7 +194,7 @@ copy into @stage_json_dev from "ECOMMERCE_DB"."ECOMMERCE_LIV"."LINEITEM";
 -- problem: it needs valid json, get one:
 select To_JSON(object_construct(*)) as json_obj from "ECOMMERCE_DB"."ECOMMERCE_LIV"."LINEITEM" limit 10;
 
--- copy into not working with cte
+-- 'copy into' not working with cte
 with cte (json_obj) as (
   select To_JSON(object_construct(*)) from "ECOMMERCE_DB"."ECOMMERCE_LIV"."LINEITEM"
 ) select * from cte limit 10; -- copy into @stage_json_dev from cte;
@@ -307,6 +307,3 @@ select -- order of columns is crucial
 from lineitem_raw_json;
 
 select * from lineitem limit 3;
-
--- next: https://youtu.be/EQ44K5GfgDw?t=2006
--- creating roles and granting access
