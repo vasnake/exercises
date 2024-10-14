@@ -29,5 +29,3 @@ select * from secure_vw_aggregated_roles;
 select get_ddl('view', 'urgent_priority_orders'); -- should work
 
 select get_ddl('view', 'secure_priority_orders'); -- should fail
-
--- Introduction to streams https://youtu.be/EQ44K5GfgDw?t=2198
