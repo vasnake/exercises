@@ -51,6 +51,44 @@ from awsglue.utils import getResolvedOptions
 pwd = os.getenv("SF_ACC_PASSWORD", "***")
 if pwd == "***":
   raise EnvironmentError("Environment variable 'SF_ACC_PASSWORD' is not set")
+help = """
+aws glue python secrets passing
+AWS Glue JOB to get secret value from secretmanager https://stackoverflow.com/questions/74788639/aws-glue-job-to-get-secret-value-from-secretmanager
+sm_client = boto3.client('secretsmanager')
+response = sm_client.get_secret_value(
+    SecretId=<your_secret_id>
+)
+
+https://eu-north-1.console.aws.amazon.com/secretsmanager/landing?region=eu-north-1
+https://eu-north-1.console.aws.amazon.com/secretsmanager/listsecrets?region=eu-north-1
+
+# Use this code snippet in your app.
+# If you need more information about configurations
+# or implementing the sample code, visit the AWS docs:
+# https://aws.amazon.com/developer/language/python/
+import boto3
+from botocore.exceptions import ClientError
+def get_secret():
+    secret_name = "SF_ACC_PASSWORD"
+    region_name = "eu-north-1"
+    # Create a Secrets Manager client
+    session = boto3.session.Session()
+    client = session.client(
+        service_name='secretsmanager',
+        region_name=region_name
+    )
+    try:
+        get_secret_value_response = client.get_secret_value(
+            SecretId=secret_name
+        )
+    except ClientError as e:
+        # For a list of exceptions thrown, see
+        # https://docs.aws.amazon.com/secretsmanager/latest/apireference/API_GetSecretValue.html
+        raise e
+    secret = get_secret_value_response['SecretString']
+    # Your code goes here.
+
+"""
 
 ctx = snowflake.connector.connect(
   user="vlk",
