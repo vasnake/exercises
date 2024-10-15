@@ -45,3 +45,4 @@ finally:
 ctx.close()
 
 # py script on aws glue https://youtu.be/EQ44K5GfgDw?t=3044
+# 07_showflake-etl-aws-glue.py
