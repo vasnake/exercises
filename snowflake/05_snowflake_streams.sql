@@ -156,3 +156,4 @@ update members_raw set fee = 10 where id = 3;
 select * from members_append_stream; -- no results (append_only stream, remember?)
 
 -- Connect Python with Snowflake on localhost https://youtu.be/EQ44K5GfgDw?t=2798
+-- 06_snowflake-connector-python.py
