@@ -15,6 +15,7 @@ import snowflake.connector
 pwd = os.getenv("SF_ACC_PASSWORD", "***")
 if pwd == "***":
   raise EnvironmentError("Environment variable 'SF_ACC_PASSWORD' is not set")
+print("secret: `%s`\n" % pwd)
 
 ctx = snowflake.connector.connect(
   user="vlk",

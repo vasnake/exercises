@@ -61,6 +61,7 @@ response = sm_client.get_secret_value(
 
 https://eu-north-1.console.aws.amazon.com/secretsmanager/landing?region=eu-north-1
 https://eu-north-1.console.aws.amazon.com/secretsmanager/listsecrets?region=eu-north-1
+AWS Secrets Manager / Secrets / SF_ACC_PASSWORD
 
 # Use this code snippet in your app.
 # If you need more information about configurations
