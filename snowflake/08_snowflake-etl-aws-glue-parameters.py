@@ -46,7 +46,7 @@ def main():
 
     sql_query = """select * from LINEITEM
         where l_shipdate='{0}' and l_suppkey='{1}'
-        limit 3""".format(ship_date, supplier_key)
+        limit 3""".format(ship_date, supplier_key)  # really? placeholders?
     print("query: %s\n" % sql_query)
 
     ctx = snowflake.connector.connect(
@@ -79,8 +79,7 @@ def main():
         raise e
     finally:
         cs.close()
-
-    ctx.close()
+        ctx.close()
 
 
 def get_sf_acc_password():
