@@ -34,4 +34,35 @@ bin/kafka-console-producer.sh --topic test-data --bootstrap-server :::9092
 bin/kafka-console-consumer.sh --topic test-data --from-beginning --bootstrap-server :::9092
 ```
 
-next: kafka - snowflake connector https://youtu.be/EQ44K5GfgDw?t=3829
+# kafka - snowflake connector https://youtu.be/EQ44K5GfgDw?t=3829
+
+steps to config kafka - snowflake connector
+- create SF_connector.properties file
+- config Connect-standalone.properties file
+
+`vim ./config/SF_connector.properties`
+```properties
+connector.class=com.snowflake.kafka.connector.SnowflakeSinkConnector
+key.converter=com.snowflake.kafka.connector.records.SnowflakeJsonConverter
+value.converter=com.snowflake.kafka.connector.records.SnowflakeJsonConverter
+tasks.max=8
+topics=sales-data
+snowflake.topic2table.map=sales-data:sales_data
+buffer.count.records=10000
+buffer.flash.time=60
+buffer.size.bytes=5000000
+snowflake.url.name=https://bz10531.eu-north-1.aws.snowflakecomputing.com:443 # from account url
+snowflake.user.name=vlk
+snowflake.private.key=
+snowflake.database.name=ecommerce_db
+snowflake.schema.name=kafka_live_streaming
+name=kafka_live_streaming
+```
+
+`vim ./config/connect-standalone.properties`
+```properties
+plugin.path=/mnt/c/Users/valik/Downloads/kafka_2.13-3.8.0/libs
+bootstrap.servers=:::9092
+```
+
+next: setup encription https://youtu.be/EQ44K5GfgDw?t=3986
