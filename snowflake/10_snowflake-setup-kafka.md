@@ -95,4 +95,45 @@ alter user vlk set RSA_PUBLIC_KEY='MIIBIj...
 desc user vlk;
 ```
 
-next: real-time streaming with kafka https://youtu.be/EQ44K5GfgDw?t=4115
+# real-time streaming with kafka https://youtu.be/EQ44K5GfgDw?t=4115
+
+steps
+- create a topic in kafka
+- insert data to topic
+- stream data from the topic into snowflake table
+
+create schema for kafka, use SF worksheet:
+```sql
+-- use role sysadmin;
+use role accountadmin;
+-- use schema ecommerce_db.ecommerce_liv;
+create schema ecommerce_db.kafka_live_streaming;
+use schema ecommerce_db.kafka_live_streaming
+```
+
+change topic name in connect properties file:
+```properties
+topics=salesData
+snowflake.topic2table.map=salesData:sales_data
+```
+
+create topic: `bin/kafka-topics.sh --create --topic testData --bootstrap-server :::9092`
+
+generate data
+```s
+bin/kafka-console-producer.sh --topic testData --bootstrap-server :::9092
+{"name":"John", "age":30, "car":null}
+{"name":"Alice", "age":25, "car":"ford"}
+```
+
+push data to snowflake
+```s
+connect-standalone ./config/connect-standalone.properties ./config/SF-connect.properties
+```
+
+check (SF worksheet):
+```sql
+select * from sales_data limit 3;
+```
+
+next: zero copy clone https://youtu.be/EQ44K5GfgDw?t=4318
