@@ -38,7 +38,7 @@ bin/kafka-console-consumer.sh --topic test-data --from-beginning --bootstrap-ser
 
 steps to config kafka - snowflake connector
 - create SF_connector.properties file
-- config Connect-standalone.properties file
+- config connect-standalone.properties file
 
 `vim ./config/SF_connector.properties`
 ```properties
@@ -65,4 +65,34 @@ plugin.path=/mnt/c/Users/valik/Downloads/kafka_2.13-3.8.0/libs
 bootstrap.servers=:::9092
 ```
 
-next: setup encription https://youtu.be/EQ44K5GfgDw?t=3986
+# setup encription keys https://youtu.be/EQ44K5GfgDw?t=3986
+
+setup encription, kafka+snowflake, steps
+- create RSA private key
+- create RSA public key
+- assign public key to user in SF
+
+Where I get keys? Use `ssh-keygen`, or:
+Online RSA Key Generator http://travistidwell.com/jsencrypt/demo/
+
+Where I should put private key:
+```s
+pushd /mnt/c/Users/valik/Downloads/kafka_2.13-3.8.0/
+vim ./config/SF_connector.properties
+# goto: `snowflake.private.key=`
+# paste
+MIIEowIB...\
+...t6G8LG1r
+```
+
+copy-paste public key text to SF sql:
+```sql
+-- use role sysadmin;
+use role accountadmin;
+use schema ecommerce_db.ecommerce_liv;
+alter user vlk set RSA_PUBLIC_KEY='MIIBIj...
+...QAB';
+desc user vlk;
+```
+
+next: real-time streaming with kafka https://youtu.be/EQ44K5GfgDw?t=4115
