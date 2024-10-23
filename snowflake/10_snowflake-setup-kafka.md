@@ -97,6 +97,8 @@ desc user vlk;
 
 # real-time streaming with kafka https://youtu.be/EQ44K5GfgDw?t=4115
 
+https://docs.snowflake.com/en/user-guide/kafka-connector-overview
+
 steps
 - create a topic in kafka
 - insert data to topic
@@ -106,34 +108,153 @@ create schema for kafka, use SF worksheet:
 ```sql
 -- use role sysadmin;
 use role accountadmin;
--- use schema ecommerce_db.ecommerce_liv;
+use database ecommerce_db;
 create schema ecommerce_db.kafka_live_streaming;
-use schema ecommerce_db.kafka_live_streaming
+use schema ecommerce_db.kafka_live_streaming;
 ```
 
 change topic name in connect properties file:
+`vim ./config/SF_connector.properties`
 ```properties
 topics=salesData
 snowflake.topic2table.map=salesData:sales_data
 ```
 
-create topic: `bin/kafka-topics.sh --create --topic testData --bootstrap-server :::9092`
+Create topic:
+`bin/kafka-topics.sh --create --topic salesData --bootstrap-server :::9092`
 
-generate data
+N.b. kafka should be started already:
 ```s
-bin/kafka-console-producer.sh --topic testData --bootstrap-server :::9092
+bin/zookeeper-server-start.sh config/zookeeper.properties &
+bin/kafka-server-start.sh config/server.properties &
+```
+
+Generate data:
+```s
+bin/kafka-console-producer.sh --topic salesData --bootstrap-server :::9092
 {"name":"John", "age":30, "car":null}
 {"name":"Alice", "age":25, "car":"ford"}
 ```
+Check: `bin/kafka-console-consumer.sh --topic salesData --from-beginning --bootstrap-server :::9092`
 
-push data to snowflake
+Push data to snowflake:
 ```s
-connect-standalone ./config/connect-standalone.properties ./config/SF-connect.properties
+bin/connect-standalone.sh ./config/connect-standalone.properties ./config/SF_connector.properties
+# errors, see below
 ```
+It should create raw-data table, with 2 fields: (meta, data).
+You have to transform raw data to structured data, later.
 
 check (SF worksheet):
 ```sql
 select * from sales_data limit 3;
+select * from ECOMMERCE_DB.KAFKA_LIVE_STREAMING.SALES_DATA limit 3;
+RECORD_METADATA	RECORD_CONTENT
+{
+  "CreateTime": 1729691102669,
+  "key": {},
+  "key_schema_id": 0,
+  "offset": 0,
+  "partition": 0,
+  "topic": "salesData"
+}	{
+  "age": 30,
+  "car": null,
+  "name": "John"
+}
+
+{
+  "CreateTime": 1729691107818,
+  "key": {},
+  "key_schema_id": 0,
+  "offset": 1,
+  "partition": 0,
+  "topic": "salesData"
+}	{
+  "age": 25,
+  "car": "ford",
+  "name": "Alice"
+}
+```
+
+Kafka Connector errors:
+```
+bin/connect-standalone.sh ./config/connect-standalone.properties ./config/SF_connector.properties
+...
+org.apache.kafka.connect.errors.ConnectException: Failed to find any class that implements Connector and which name matches com.snowflake.kafka.connector.SnowflakeSinkConnector, available connectors are: ...
+
+ok, goto docs: https://docs.snowflake.com/en/user-guide/kafka-connector
+
+> The Kafka connector is designed to run in a Kafka Connect cluster to read data from Kafka topics and write the data into Snowflake tables
+The Kafka connector supports two data loading methods:
+- Snowpipe
+- Snowpipe Streaming.
+With Snowpipe Streaming, the Kafka connector optionally supports schema detection and evolution.
+...
+Each Kafka message is passed to Snowflake in JSON format or Avro format. 
+...
+each topic should be processed by only one instance of the connector
+...
+There is no guarantee that rows are inserted in the order that they were originally published
+
+https://mvnrepository.com/artifact/com.snowflake/snowflake-kafka-connector/2.4.1
+copy jar to kafka_2.13-3.8.0/libs/snowflake-kafka-connector-2.4.1.jar
+
+Next try
+bin/connect-standalone.sh ./config/connect-standalone.properties ./config/SF_connector.properties
+...
+error: [SF_KAFKA_CONNECTOR] Exception: Failed to prepare SQL statement
+Error Code: 2001
+Detail: SQL Exception, reported by Snowflake JDBC
+Message: SQL compilation error:
+Stage 'ECOMMERCE_DB.KAFKA_LIVE_STREAMING.SNOWFLAKE_KAFKA_CONNECTOR_KAFKA_LIVE_STREAMING_STAGE_SALES_DATA' does not exist or not authorized.
+
+Stop right here: I mixed up topic names, 'testData' vs 'salesData'.
+After fixing this, all works as expected.
+
+ok, goto docs: https://docs.snowflake.com/en/user-guide/kafka-connector-install#creating-a-role-to-use-the-kafka-connector
+
+-- Use a role that can create and manage roles and privileges.
+USE ROLE securityadmin;
+
+-- Create a Snowflake role with the privileges to work with the connector.
+CREATE ROLE kc_role_1;
+
+-- Grant privileges on the database.
+GRANT USAGE ON DATABASE ecommerce_db TO ROLE kc_role_1;
+
+-- Grant privileges on the schema.
+-- use database ecommerce_db;
+GRANT USAGE ON SCHEMA ecommerce_db.kafka_live_streaming TO ROLE kc_role_1;
+GRANT CREATE TABLE ON SCHEMA ecommerce_db.kafka_live_streaming TO ROLE kc_role_1;
+GRANT CREATE STAGE ON SCHEMA ecommerce_db.kafka_live_streaming TO ROLE kc_role_1;
+GRANT CREATE PIPE ON SCHEMA ecommerce_db.kafka_live_streaming TO ROLE kc_role_1;
+
+-- Only required if the Kafka connector will load data into an existing table.
+-- GRANT OWNERSHIP ON TABLE existing_table1 TO ROLE kc_role_1;
+
+-- Only required if the Kafka connector will stage data files in an existing internal stage: (not recommended).
+-- GRANT READ, WRITE ON STAGE existing_stage1 TO ROLE kc_role_1;
+
+-- Grant the custom role to an existing user.
+GRANT ROLE kc_role_1 TO USER vlk;
+
+-- Set the custom role as the default role for the user.
+-- If you encounter an 'Insufficient privileges' error, verify the role that has the OWNERSHIP privilege on the user.
+ALTER USER vlk SET DEFAULT_ROLE = kc_role_1; -- current: ACCOUNTADMIN
+
+Next try:
+bin/connect-standalone.sh ./config/connect-standalone.properties ./config/SF_connector.properties
+...
+the same error:
+Stage 'ECOMMERCE_DB.KAFKA_LIVE_STREAMING.SNOWFLAKE_KAFKA_CONNECTOR_KAFKA_LIVE_STREAMING_STAGE_SALES_DATA' does not exist or not authorized.
+
+Maybe create stage by hand?
+use role accountadmin;
+CREATE STAGE ECOMMERCE_DB.KAFKA_LIVE_STREAMING.SNOWFLAKE_KAFKA_CONNECTOR_KAFKA_LIVE_STREAMING_STAGE_SALES_DATA FILE_FORMAT = (TYPE = JSON);
+GRANT READ, WRITE ON STAGE ECOMMERCE_DB.KAFKA_LIVE_STREAMING.SNOWFLAKE_KAFKA_CONNECTOR_KAFKA_LIVE_STREAMING_STAGE_SALES_DATA TO ROLE kc_role_1;
+show stages;
+
 ```
 
 next: zero copy clone https://youtu.be/EQ44K5GfgDw?t=4318
