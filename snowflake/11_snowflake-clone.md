@@ -144,4 +144,84 @@ weird, should be != 0
 */
 ```
 
--- next: transient and temporary tables cloning https://youtu.be/EQ44K5GfgDw?t=5009
+# transient and temporary tables cloning https://youtu.be/EQ44K5GfgDw?t=5009
+
+possible clones:
+- permanent -> transient or temporary,
+- transient -> transient or temporary,
+- temp -> temp or trans
+
+impossible: trans or temp -> permanent
+
+clone permanent
+```sql
+use database ecommerce;
+use schema e_dev;
+
+create or replace temporary table so_temp_from_base clone simple_order;
+create or replace transient table so_trans_from_base clone simple_order;
+```
+
+clone transient
+```sql
+create or replace transient table simple_order_trans (
+  orderkey number(38,0),
+  custkey number(38,0),
+  orderstatus varchar(1),
+  totalprice number(12,2),
+  orderdate date,
+  orderpriority varchar(15)
+);
+insert into simple_order_trans(orderkey, custkey, orderstatus, totalprice, orderdate, orderpriority)
+  select o_orderkey, o_custkey, o_orderstatus, o_totalprice, o_orderdate, o_orderpriority
+  from snowflake_sample_data.tpch_sf1.orders
+  order by o_orderkey limit 100;
+select * from simple_order_trans limit 9;
+
+-- SQL compilation error: Transient object cannot be cloned to a permanent object
+create table so_base_from_trans clone simple_order_trans; -- failed, can't do such thing
+
+create transient table so_trans_from_trans clone simple_order_trans;
+create temporary table so_temp_from_trans clone simple_order_trans;
+
+show tables like '%_trans';
+/*
+created_on	name	database_name	schema_name	kind	comment	cluster_by	rows	bytes	owner	retention_time	automatic_clustering	change_tracking	is_external	enable_schema_evolution	owner_role_type	is_event	budget	is_hybrid	is_iceberg	is_dynamic	is_immutable
+2024-10-24 07:47:31.047 -0700	SIMPLE_ORDER_TRANS	ECOMMERCE	E_DEV	TRANSIENT			100	3584	ACCOUNTADMIN	1	OFF	OFF	N	N	ROLE	N		N	N	N	N
+2024-10-24 07:48:47.954 -0700	SO_TEMP_FROM_TRANS	ECOMMERCE	E_DEV	TEMPORARY			100	3584	ACCOUNTADMIN	1	OFF	OFF	N	N	ROLE	N		N	N	N	N
+2024-10-24 07:48:43.017 -0700	SO_TRANS_FROM_TRANS	ECOMMERCE	E_DEV	TRANSIENT			100	3584	ACCOUNTADMIN	1	OFF	OFF	N	N	ROLE	N		N	N	N	N
+*/
+```
+
+clone temporary
+```sql
+create or replace temporary table simple_order_temp (
+  orderkey number(38,0),
+  custkey number(38,0),
+  orderstatus varchar(1),
+  totalprice number(12,2),
+  orderdate date,
+  orderpriority varchar(15)
+);
+insert into simple_order_temp(orderkey, custkey, orderstatus, totalprice, orderdate, orderpriority)
+  select o_orderkey, o_custkey, o_orderstatus, o_totalprice, o_orderdate, o_orderpriority
+  from snowflake_sample_data.tpch_sf1.orders
+  order by o_orderkey limit 100;
+select * from simple_order_temp limit 9;
+
+create or replace temporary table so_temp_from_temp clone simple_order_temp;
+create or replace transient table so_trans_from_temp clone simple_order_temp;
+
+-- SQL compilation error: Temp table cannot be cloned to a permanent table; clone to a transient table instead
+create table so_base_from_temp clone simple_order_temp; -- failed
+
+show tables like '%_temp';
+/*
+created_on	name	database_name	schema_name	kind	comment	cluster_by	rows	bytes	owner	retention_time	automatic_clustering	change_tracking	is_external	enable_schema_evolution	owner_role_type	is_event	budget	is_hybrid	is_iceberg	is_dynamic	is_immutable
+2024-10-24 07:50:05.496 -0700	SIMPLE_ORDER_TEMP	ECOMMERCE	E_DEV	TEMPORARY			100	3584	ACCOUNTADMIN	1	OFF	OFF	N	N	ROLE	N		N	N	N	N
+2024-10-24 07:50:40.054 -0700	SO_TEMP_FROM_TEMP	ECOMMERCE	E_DEV	TEMPORARY			100	3584	ACCOUNTADMIN	1	OFF	OFF	N	N	ROLE	N		N	N	N	N
+2024-10-24 07:50:41.268 -0700	SO_TRANS_FROM_TEMP	ECOMMERCE	E_DEV	TRANSIENT			100	3584	ACCOUNTADMIN	1	OFF	OFF	N	N	ROLE	N		N	N	N	N
+*/
+```
+
+-- next: object dependency with clone https://youtu.be/EQ44K5GfgDw?t=5264
