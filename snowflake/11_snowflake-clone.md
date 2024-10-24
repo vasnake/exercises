@@ -224,4 +224,135 @@ created_on	name	database_name	schema_name	kind	comment	cluster_by	rows	bytes	own
 */
 ```
 
--- next: object dependency with clone https://youtu.be/EQ44K5GfgDw?t=5264
+# object dependency with clone https://youtu.be/EQ44K5GfgDw?t=5264
+
+Table clone depends on sequence (same schema), works as expected: one sequence and two independent tables, depending on that one seq.
+
+```sql
+use database ecommerce;
+use schema e_dev;
+
+create or replace sequence even_seq start 2 increment 2 comment='demo sequence, 2,4,6,...';
+
+create or replace table simple_order_with_seq (
+  id_seq number default even_seq.nextval,
+  orderkey number(38,0),
+  custkey number(38,0),
+  orderstatus varchar(1),
+  totalprice number(12,2),
+  orderdate date,
+  orderpriority varchar(15)
+);
+insert into simple_order_with_seq(orderkey, custkey, orderstatus, totalprice, orderdate, orderpriority)
+  select o_orderkey, o_custkey, o_orderstatus, o_totalprice, o_orderdate, o_orderpriority
+  from snowflake_sample_data.tpch_sf1.orders
+  order by o_orderkey limit 100;
+select * from simple_order_with_seq limit 9;
+/*
+ID_SEQ	ORDERKEY	CUSTKEY	ORDERSTATUS	TOTALPRICE	ORDERDATE	ORDERPRIORITY
+2	1	36901	O	173665.47	1996-01-02	5-LOW
+4	2	78002	O	46929.18	1996-12-01	1-URGENT
+6	3	123314	F	193846.25	1993-10-14	5-LOW
+8	4	136777	O	32151.78	1995-10-11	5-LOW
+10	5	44485	F	144659.20	1994-07-30	5-LOW
+12	6	55624	F	58749.59	1992-02-21	4-NOT SPECIFIED
+14	7	39136	O	252004.18	1996-01-10	2-HIGH
+16	32	130057	O	208660.75	1995-07-16	2-HIGH
+18	33	66958	F	163243.98	1993-10-27	3-MEDIUM
+*/
+```
+
+clone the table
+```sql
+-- reference on the seq. in the same schema
+create or replace table simple_order_with_seq_clone clone simple_order_with_seq;
+select * from simple_order_with_seq_clone limit 9;
+/*
+ID_SEQ	ORDERKEY	CUSTKEY	ORDERSTATUS	TOTALPRICE	ORDERDATE	ORDERPRIORITY
+2	1	36901	O	173665.47	1996-01-02	5-LOW
+4	2	78002	O	46929.18	1996-12-01	1-URGENT
+6	3	123314	F	193846.25	1993-10-14	5-LOW
+8	4	136777	O	32151.78	1995-10-11	5-LOW
+10	5	44485	F	144659.20	1994-07-30	5-LOW
+12	6	55624	F	58749.59	1992-02-21	4-NOT SPECIFIED
+14	7	39136	O	252004.18	1996-01-10	2-HIGH
+16	32	130057	O	208660.75	1995-07-16	2-HIGH
+18	33	66958	F	163243.98	1993-10-27	3-MEDIUM
+*/
+
+select get_ddl('table', 'simple_order_with_seq_clone');
+/*
+create or replace TABLE SIMPLE_ORDER_WITH_SEQ_CLONE (
+	ID_SEQ NUMBER(38,0) DEFAULT ECOMMERCE.E_DEV.EVEN_SEQ.NEXTVAL,
+	ORDERKEY NUMBER(38,0),
+	CUSTKEY NUMBER(38,0),
+	ORDERSTATUS VARCHAR(1),
+	TOTALPRICE NUMBER(12,2),
+	ORDERDATE DATE,
+	ORDERPRIORITY VARCHAR(15)
+);
+*/
+```
+
+check seq. values uniquiness
+```sql
+select max(id_seq) from simple_order_with_seq; -- 200
+select max(id_seq) from simple_order_with_seq_clone; -- 200
+
+-- seq.nextvalue = 402, WTF?
+insert into simple_order_with_seq(orderkey, custkey, orderstatus, totalprice, orderdate, orderpriority)
+  select o_orderkey, o_custkey, o_orderstatus, o_totalprice, o_orderdate, o_orderpriority
+  from snowflake_sample_data.tpch_sf1.orders
+  order by o_orderkey limit 9;
+select max(id_seq) from simple_order_with_seq; -- 418
+
+insert into simple_order_with_seq_clone(orderkey, custkey, orderstatus, totalprice, orderdate, orderpriority)
+  select o_orderkey, o_custkey, o_orderstatus, o_totalprice, o_orderdate, o_orderpriority
+  from snowflake_sample_data.tpch_sf1.orders
+  order by o_orderkey limit 9;
+select max(id_seq) from simple_order_with_seq_clone; -- 436
+```
+
+one seq. and two tables: confirmed (id_seq starts from 402 because this snippet was created before previous snippet)
+```sql
+delete from simple_order_with_seq where id_seq > 1;
+delete from simple_order_with_seq_clone where id_seq > 1;
+
+insert into simple_order_with_seq(orderkey, custkey, orderstatus, totalprice, orderdate, orderpriority)
+  select o_orderkey, o_custkey, o_orderstatus, o_totalprice, o_orderdate, o_orderpriority
+  from snowflake_sample_data.tpch_sf1.orders
+  order by o_orderkey limit 9;
+select * from simple_order_with_seq limit 9;
+/*
+ID_SEQ	ORDERKEY	CUSTKEY	ORDERSTATUS	TOTALPRICE	ORDERDATE	ORDERPRIORITY
+402	1	36901	O	173665.47	1996-01-02	5-LOW
+404	2	78002	O	46929.18	1996-12-01	1-URGENT
+406	3	123314	F	193846.25	1993-10-14	5-LOW
+408	4	136777	O	32151.78	1995-10-11	5-LOW
+410	5	44485	F	144659.20	1994-07-30	5-LOW
+412	6	55624	F	58749.59	1992-02-21	4-NOT SPECIFIED
+414	7	39136	O	252004.18	1996-01-10	2-HIGH
+416	32	130057	O	208660.75	1995-07-16	2-HIGH
+418	33	66958	F	163243.98	1993-10-27	3-MEDIUM
+*/
+
+insert into simple_order_with_seq_clone(orderkey, custkey, orderstatus, totalprice, orderdate, orderpriority)
+  select o_orderkey, o_custkey, o_orderstatus, o_totalprice, o_orderdate, o_orderpriority
+  from snowflake_sample_data.tpch_sf1.orders
+  order by o_orderkey limit 9;
+select * from simple_order_with_seq_clone limit 9;
+/*
+ID_SEQ	ORDERKEY	CUSTKEY	ORDERSTATUS	TOTALPRICE	ORDERDATE	ORDERPRIORITY
+420	1	36901	O	173665.47	1996-01-02	5-LOW
+422	2	78002	O	46929.18	1996-12-01	1-URGENT
+424	3	123314	F	193846.25	1993-10-14	5-LOW
+426	4	136777	O	32151.78	1995-10-11	5-LOW
+428	5	44485	F	144659.20	1994-07-30	5-LOW
+430	6	55624	F	58749.59	1992-02-21	4-NOT SPECIFIED
+432	7	39136	O	252004.18	1996-01-10	2-HIGH
+434	32	130057	O	208660.75	1995-07-16	2-HIGH
+436	33	66958	F	163243.98	1993-10-27	3-MEDIUM
+*/
+```
+
+-- clone file formats and sequences https://youtu.be/EQ44K5GfgDw?t=5468
