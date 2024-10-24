@@ -16,4 +16,4 @@ Programming languages, developer's tools, tricks, exercises, kata, etc.
 
 ## Snowflake
 
-[Snowflake, AWS: basics](./snowflake/)
+[Snowflake, AWS, Kafka: basics](./snowflake/)
