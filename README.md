@@ -17,3 +17,19 @@ Programming languages, developer's tools, tricks, exercises, kata, etc.
 ## Snowflake
 
 [Snowflake, AWS, Kafka: basics](./snowflake/)
+
+## dbt (and snowflake)
+
+- Oct 30, 11:30, snowflake lab "build data products and a data mesh with dbt cloud"
+
+data mesh: It is about small teams, they own data products, use dbt (data product management: contracts, versions, security) over snowflake (storage, compute). Teams use each other products.
+It's like a software engineering, only it is data engineering.
+
+Demonstration: how to use dbt with snowflake to build and manage "data products":
+a few custom marts with data-contracts, cross-team dependencies, access control, etc.
+
+links
+- https://quickstarts.snowflake.com/guide/data-products-data-mesh-dbt-cloud/#0
+- https://sf-dbt-mesh-setup.streamlit.app/
+
+TODO: do it with you own hands
